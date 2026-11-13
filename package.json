@@ -1,0 +1,17 @@
+{
+  "name": "hot-compress",
+  "version": "0.1.0",
+  "description": "Local-first web image and video optimization",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "bin": { "hot-compress": "bin/hot-compress.mjs" },
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --experimental-strip-types src/cli.ts gui",
+    "start": "node bin/hot-compress.mjs gui",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": { "@types/node": "^24.0.0", "typescript": "^5.9.3" }
+}

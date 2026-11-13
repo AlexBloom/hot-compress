@@ -1,0 +1,26 @@
+# Copy to .github/workflows/compress-assets.yml in this repository.
+# This is opt-in and runs on branch pushes before opening a PR, or manually.
+name: Prepare web assets
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+    paths: ['assets/**']
+permissions:
+  contents: read
+jobs:
+  compress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: media
+        with:
+          paths: assets
+          responsive: 'true'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: optimized-web-assets
+          path: optimized/
+          if-no-files-found: ignore

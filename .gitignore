@@ -1,0 +1,8 @@
+node_modules/
+dist/
+optimized/
+.hot-compress/
+.DS_Store
+*.log
+.env*
+!.env.example

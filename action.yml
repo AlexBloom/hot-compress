@@ -1,0 +1,51 @@
+name: Hot Compress
+description: Optimize web images and video without replacing originals
+inputs:
+  paths:
+    description: Newline-separated files or directories (no glob expansion)
+    required: true
+  output:
+    description: Output parent directory
+    default: optimized
+  format:
+    description: Opaque image output (webp or avif); transparency always PNG
+    default: webp
+  preset:
+    description: balanced, smaller, or quality
+    default: balanced
+  responsive:
+    description: Generate responsive image widths and HTML snippets
+    default: 'false'
+outputs:
+  directory:
+    description: Generated batch directory
+    value: ${{ steps.compress.outputs.directory }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - name: Install Linux codecs
+      if: runner.os == 'Linux'
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y imagemagick ffmpeg zip
+    - name: Build engine
+      shell: bash
+      env:
+        HOT_ACTION_PATH: ${{ github.action_path }}
+      run: |
+        cd "$HOT_ACTION_PATH"
+        npm ci --ignore-scripts
+        npm run build
+    - name: Compress assets
+      id: compress
+      shell: bash
+      env:
+        HOT_ACTION_PATH: ${{ github.action_path }}
+        HOT_INPUTS: ${{ inputs.paths }}
+        HOT_OUTPUT: ${{ inputs.output }}
+        HOT_FORMAT: ${{ inputs.format }}
+        HOT_PRESET: ${{ inputs.preset }}
+        HOT_RESPONSIVE: ${{ inputs.responsive }}
+      run: node "$HOT_ACTION_PATH/scripts/action.mjs"

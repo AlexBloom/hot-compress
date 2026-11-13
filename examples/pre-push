@@ -1,0 +1,6 @@
+#!/bin/sh
+# Optional hook for this repository. Adjust ./assets to your source directory.
+# Generated files are left for review; this hook does not stage or commit them.
+set -eu
+npm run build
+node bin/hot-compress.mjs ./assets --responsive
