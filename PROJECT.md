@@ -30,6 +30,10 @@ Balanced quality, bounded dimensions, no crop/upscale, metadata removal, auto-or
 - Self-hosted web, app/CDN origin, Instagram, Facebook, TikTok, YouTube, X and general-sharing destinations. Dated official/community source links; separate API/app facts from product choices. Algorithm tooltips work on hover/focus and click. Presets are not exhaustive compliance validators or guarantees of platform behavior.
 - Existing CLI, installed skill and Action expose the same new settings.
 
+## Layout follow-up
+
+Restored the original hotcompress wordmark with its arrow mark, broad header/title spacing, and 1.45:1 desktop input/control split. Shadcn controls, neutral styling, Use defaults / Customize and reduced instructional copy remain. The layout stacks below 760 px; custom input controls stay in the input pane.
+
 ## Next milestones
 
 1. Collect representative samples across current camera modes, especially compressed RAW/DNG, pixel shift and wide-gamut/HDR inputs. Validate Linux codecs and GitHub workflows in a published repo. Run controlled upload experiments rather than deriving stronger claims from Reddit.

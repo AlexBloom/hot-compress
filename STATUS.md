@@ -11,6 +11,10 @@ Updated November 13, 2026, America/New_York. Built directly on Alex's Mac at `/U
 - H.264/HEVC/VP9/AV1 and supported source codec/container preservation, CRF and frame-rate controls. Upload versus delivery presets use different quality/motion defaults.
 - CLI, installed skill and composite Action expose the same options. The installed skill instructions were updated only after confirming there were no independent edits.
 
+## Layout follow-up
+
+Restored the original wordmark and two-column workspace with input on the left and tabbed controls on the right. Kept neutral shadcn components and reduced copy. Build/type checks passed. Browser checked at the existing narrow width and at 1280 px: desktop columns use the original 1.45:1 proportion, Customize retains its controls, and there is no horizontal overflow. Reset the temporary viewport and left Use defaults selected. Screenshot: `.hot-compress/preview-layout.jpg`. No compression-engine changes or new tests were needed for this layout-only change.
+
 ## Verified
 
 - Build and backend/frontend TypeScript checks pass; skill validator and workflow/Action YAML checks pass.
