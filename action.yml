@@ -8,14 +8,17 @@ inputs:
     description: Output parent directory
     default: optimized
   format:
-    description: Opaque image output (webp or avif); transparency always PNG
-    default: webp
+    description: Image format (auto, preserve, webp, avif, jpeg, png, tiff, heic, jxl); alpha stays PNG
+    default: auto
   preset:
     description: balanced, smaller, or quality
     default: balanced
   responsive:
     description: Generate responsive image widths and HTML snippets
     default: 'false'
+  options:
+    description: JSON object with additional engine options, such as destination or videoFormat
+    default: '{}'
 outputs:
   directory:
     description: Generated batch directory
@@ -29,7 +32,7 @@ runs:
     - name: Install Linux codecs
       if: runner.os == 'Linux'
       shell: bash
-      run: sudo apt-get update && sudo apt-get install -y imagemagick ffmpeg zip
+      run: sudo apt-get update && sudo apt-get install -y imagemagick ffmpeg zip libraw-bin libjxl-tools
     - name: Build engine
       shell: bash
       env:
@@ -47,5 +50,6 @@ runs:
         HOT_OUTPUT: ${{ inputs.output }}
         HOT_FORMAT: ${{ inputs.format }}
         HOT_PRESET: ${{ inputs.preset }}
+        HOT_OPTIONS: ${{ inputs.options }}
         HOT_RESPONSIVE: ${{ inputs.responsive }}
       run: node "$HOT_ACTION_PATH/scripts/action.mjs"
