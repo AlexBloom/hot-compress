@@ -17,4 +17,6 @@ Use `scripts/compress.sh <file-or-folder> [...]`. Default output is a new batch 
 
 Report the output directory, actual byte savings (or growth), and every skipped/failed item. Generated `snippets.html` includes image dimensions and responsive markup. Review `sizes` for the actual layout, add meaningful alt text, and use eager loading/fetchpriority for an LCP hero. Do not replace project references or commit generated assets unless the user's request includes that step.
 
-If the launcher cannot find the engine, set `HOT_COMPRESS_HOME` to the Hot Compress repository and run `npm ci && npm run build` there. Codec installation is documented in that repository's README.
+The downloadable skill includes its built engine under `resources/engine/`; no repository checkout or npm build is needed. It requires Node (24 recommended) and system codecs: on Mac, `brew install node imagemagick ffmpeg libraw jpeg-xl`. The Mac app bundles Node; the launcher can use that runtime when installed in Applications.
+
+If a repository-installed launcher cannot find the engine, set `HOT_COMPRESS_HOME` to the Hot Compress repository and run `npm ci && npm run build` there. Codec installation is documented in that repository's README.

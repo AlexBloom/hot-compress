@@ -1,6 +1,6 @@
 # Status
 
-Updated November 16, 2026, America/New_York. Built directly on Alex's Mac at `/Users/alexbloom/Documents/GitHub/hot-compress`. Branch `dev`. No GitHub remote, publication or deployment.
+Updated November 16, 2026, America/New_York. Built directly on Alex's Mac at `/Users/alexbloom/Documents/GitHub/hot-compress`. Branch `dev`. Public repository created at https://github.com/AlexBloom/hot-compress. First release and Pages deployment in progress.
 
 ## Current workbench
 
@@ -38,4 +38,12 @@ The first preview can be slower for large RAW images or slow encoders because fu
 
 Camera-mode support depends on LibRaw. Multi-shot RAW, animation optimization, HDR processing and video alpha remain unimplemented and reported. Preserve format re-encodes prepared copies. No arbitrary byte budget, perceptual quality score, platform-upload A/B experiment, universal account validator or live policy refresh is claimed.
 
-Native Mac packaging and hosted web delivery remain future work. Validate Linux/live GitHub before publishing the Action. Additional camera samples and controlled platform tests would improve future guidance.
+Mac developer preview and portable skill packages are implemented; Pages download/setup deployment is in progress. Validate Linux/live GitHub before publishing the Action. Additional camera samples and controlled platform tests would improve future guidance.
+
+
+## Distribution verification (November 16)
+
+- Native AppKit/WKWebView bundle includes Node, compiled engine and the existing workbench. Apple Silicon/macOS 14+ package; ad-hoc signature verified, no Developer ID or notarization. Codec tools remain system dependencies.
+- Portable skill ZIP includes the compiled engine. Isolated installation, doctor and a four-file batch (including RAW/alpha) passed without a checkout or npm build; existing-skill overwrite is refused.
+- Mac native window startup, native file picker, transparent PNG comparison/export and ZIP save were verified. Download navigation cancellation is handled without closing the app.
+- Static Pages source contains download links, honest signing/codec requirements, local-processing boundaries and the workbench screenshot. It serves no compression API.

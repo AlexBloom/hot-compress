@@ -13,4 +13,8 @@ jobs:
           cache: npm
       - run: brew install imagemagick ffmpeg libraw jpeg-xl
       - run: npm ci --ignore-scripts
+      - run: npm run check
       - run: npm test
+      - run: npm run build:site
+      - run: node scripts/package-skill.mjs
+      - run: node scripts/package-mac.mjs

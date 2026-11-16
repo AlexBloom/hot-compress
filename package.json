@@ -15,7 +15,10 @@
     "dev": "npm run build && node bin/hot-compress.mjs gui",
     "start": "node bin/hot-compress.mjs gui",
     "test": "npm run build && node --test test/*.test.mjs",
-    "check": "tsc --noEmit && tsc -p tsconfig.web.json"
+    "check": "tsc --noEmit && tsc -p tsconfig.web.json",
+    "package:mac": "npm run build && node scripts/package-mac.mjs",
+    "package:skill": "npm run build && node scripts/package-skill.mjs",
+    "build:site": "node scripts/build-site.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.5",

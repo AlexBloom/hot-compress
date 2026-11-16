@@ -2,7 +2,19 @@
 
 Local image, camera RAW and video preparation for web delivery and sharing. The CLI, Codex skill, local browser GUI and GitHub Action share one engine. Originals are retained; each run gets its own batch folder.
 
-## Run
+## Downloads
+
+[Mac app and skill downloads](https://github.com/AlexBloom/hot-compress/releases/tag/v0.2.0-preview.1) · [Setup website](https://AlexBloom.github.io/hot-compress/)
+
+The Mac developer preview is for Apple Silicon, macOS 14+. Extract the ZIP, move **Hot Compress.app** to Applications, install the system codecs below, then open it. Node and the built workbench are included. The native window runs its own authorized loopback server on an available port and stops it when you quit. Default exports go into `~/Pictures/Hot Compress/optimized`.
+
+**Signing:** this build is ad-hoc signed, without Developer ID signing or Apple notarization. macOS may block a downloaded copy. Signed distribution, Intel verification and bundled codecs remain future work. Source builds and the agent skill are alternatives.
+
+The portable skill ZIP includes the built engine. Extract it and run `node hot-compress/install.mjs` from its parent folder, then start a new Codex chat and use `$hot-compress`. Node and system codecs are required; the installer refuses to overwrite an existing skill. It needs no repository checkout or npm build. Other agents can run its shell launcher directly or load its SKILL.md.
+
+GitHub Pages hosts downloads and instructions; media processing runs locally in the Mac app, skill, CLI or localhost GUI. It is not a hosted compression service.
+
+## Run from source
 
 ```sh
 npm ci --ignore-scripts
@@ -28,7 +40,7 @@ The server and CLI have no runtime npm package imports. React, shadcn/Radix, Tai
 
 ## CLI
 
-The command is installed on this Mac. To install from another checkout, run `npm link --ignore-scripts` after building. Without installation, replace `hot-compress` with `node bin/hot-compress.mjs`.
+To install the command from a checkout, run `npm link --ignore-scripts` after building. Without installation, replace `hot-compress` with `node bin/hot-compress.mjs`.
 
 ```sh
 hot-compress ./assets
@@ -111,7 +123,7 @@ The installed skill is `$hot-compress` in new Codex chats. Repository source is 
     options: '{"destination":"instagram","format":"jpeg","quality":92}'
 ```
 
-The local-only repo has not been published. For another repository to use this Action remotely, publish it first. `examples/compress-before-pr.yml` is an opt-in branch-push/manual workflow that produces artifacts. `examples/pre-push` is a local hook example. Neither edits project references, commits outputs or opens a PR automatically. There is no GitHub “before PR creation” event.
+The public repo is `AlexBloom/hot-compress`. Other repositories can use `AlexBloom/hot-compress@main` (pin an exact commit for reproducibility). `examples/compress-before-pr.yml` is an opt-in branch-push/manual workflow that produces artifacts. `examples/pre-push` is a local hook example. Neither edits project references, commits outputs or opens a PR automatically. There is no GitHub “before PR creation” event.
 
 ## Development and limits
 
@@ -126,4 +138,15 @@ Sixteen integration tests cover media conversion, PNG alpha, RAW DNG sensor rend
 
 The GUI binds to 127.0.0.1, requires a session token, and rejects foreign origins. File uploads stream to temporary storage, with a 4 GB per-file limit; directory input/CLI avoid that upload limit. Outputs persist. Selected uploads are retained for comparisons and repeat exports, then deleted when the selection is replaced or cleared. Preview images remain in temporary session storage. Interrupted processes may leave files for OS cleanup. One GUI batch runs at a time. Per-command image timeout is two minutes, RAW decoding five minutes, video encoding thirty minutes. Video scaling is capped at an 8192 px long edge even if a higher custom maximum is requested.
 
-Animated/multipage images (including APNG and animated JXL), transparent video and HDR video are reported without flattening. There is no arbitrary target-byte budget or exhaustive platform compliance validator. Native Mac packaging and hosted web service remain future work. No deployment is configured.
+Animated/multipage images (including APNG and animated JXL), transparent video and HDR video are reported without flattening. There is no arbitrary target-byte budget or exhaustive platform compliance validator. A hosted compression service remains future work. The manual, main-only Pages workflow publishes the separate download website in `site/`.
+
+
+## Build distribution packages
+
+```sh
+npm run package:mac     # macOS; builds for the current Node architecture
+npm run package:skill   # portable built-engine ZIP
+npm run build:site      # static download/setup site
+```
+
+Outputs are ignored under `release/` and `site-dist/`. The Mac build requires Xcode Command Line Tools, includes the current Node executable and its upstream license, and ad-hoc signs the bundle. Codec binaries are not redistributed. Rebuild on the target architecture; the published preview is Apple Silicon only. `HOT_COMPRESS_WORKSPACE` optionally changes the Mac app workspace; `HOT_COMPRESS_NODE` selects a skill runtime.

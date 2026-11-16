@@ -11,7 +11,7 @@ import { PreviewLibrary } from './previews.ts';
 import { compress, command, doctor, capabilities, validateOptions, discover, type Options, type Report } from './engine.ts';
 
 export async function serve(port = 4318, open = true) {
-  if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Port must be 1024–65535.');
+  if (!Number.isInteger(port) || (port!==0 && (port < 1024 || port > 65535))) throw new Error('Port must be 0 (automatic) or 1024–65535.');
   const token = randomUUID();
   const workspace = await mkdtemp(path.join(os.tmpdir(),'hot-compress-gui-'));
   const web = fileURLToPath(new URL('../web-dist/',import.meta.url));
@@ -24,12 +24,12 @@ export async function serve(port = 4318, open = true) {
     return validateOptions(Object.fromEntries(keys.filter(key=>value[key]!==undefined).map(key=>[key,value[key]])));
   }
   async function inline(res:http.ServerResponse,file:string,mime:string){const info=await stat(file);res.writeHead(200,{'Content-Type':mime,'Content-Length':info.size,'Cache-Control':'private, max-age=3600'});await pipeline(createReadStream(file),res);}
-  const origin = `http://127.0.0.1:${port}`;
+  let origin = `http://127.0.0.1:${port}`;
   function json(res: http.ServerResponse, code: number, data: unknown) { res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data)); }
   async function body(req: http.IncomingMessage) { let value=''; for await (const chunk of req) {value+=chunk;if(value.length>64000) throw new Error('Request too large');} return JSON.parse(value); }
   const server = http.createServer(async (req,res)=> {
     try {
-      if (req.headers.host !== `127.0.0.1:${port}`) return json(res,403,{error:'Invalid host'});
+      if (req.headers.host !== new URL(origin).host) return json(res,403,{error:'Invalid host'});
       if (req.headers.origin && req.headers.origin !== origin) return json(res,403,{error:'Invalid origin'});
       const url = new URL(req.url!,origin);
       res.setHeader('X-Content-Type-Options','nosniff');
@@ -130,6 +130,8 @@ export async function serve(port = 4318, open = true) {
   });
   server.requestTimeout=30*60*1000;
   await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
+  const address=server.address();
+  if(address && typeof address!=='string')origin=`http://127.0.0.1:${address.port}`;
   const link=`${origin}/#${token}`;
   console.log(`Hot Compress is running locally: ${link}\nFiles stay on this Mac. Outputs: ${path.resolve('optimized')}\nPress Ctrl+C to stop.`);
   if(open) { const bin=process.platform==='darwin'?'open':process.platform==='win32'?'explorer':'xdg-open';void command(bin,[link],10000).catch(()=>{}); }

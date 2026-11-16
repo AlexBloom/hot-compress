@@ -27,18 +27,19 @@ const help = `Hot Compress — prepare images, camera RAW and video.
   --sizes '(max-width: 768px) 100vw, 1280px'
   --output ./optimized                Each run gets a separate batch folder
   --json                              Machine-readable report
-  --port 4318                         Local GUI port
+  --port 4318                         Local GUI port; 0 chooses a free port
+  --no-open                           Start GUI without opening a browser
 
 Requires ImageMagick, LibRaw for camera RAW, FFmpeg for video, zip for GUI archives.
 Transparency stays PNG. Preserve-format re-encodes; RAW renders to TIFF.
 `;
 try {
  const stringNames=['destination','format','video-format','preset','quality','png-level','tiff-compression','jpeg-chroma','video-crf','frame-rate','raw-white-balance','resize','max-width','widths','sizes','output','port'];
- const {values,positionals}=parseArgs({allowPositionals:true,options:{...Object.fromEntries(stringNames.map(key=>[key,{type:'string' as const}])),help:{type:'boolean',short:'h'},responsive:{type:'boolean'},lossless:{type:'boolean'},json:{type:'boolean'}}});
+ const {values,positionals}=parseArgs({allowPositionals:true,options:{...Object.fromEntries(stringNames.map(key=>[key,{type:'string' as const}])),help:{type:'boolean',short:'h'},responsive:{type:'boolean'},lossless:{type:'boolean'},json:{type:'boolean'},'no-open':{type:'boolean'}}});
  const str=(key:string)=>(values as Record<string,unknown>)[key] as string|undefined;
  const num=(key:string)=>str(key)===undefined?undefined:Number(str(key));
  if(values.help||!positionals.length)console.log(help);
- else if(positionals[0]==='gui')await serve(Number(str('port')||4318));
+ else if(positionals[0]==='gui')await serve(Number(str('port')??4318),!values['no-open']);
  else if(positionals[0]==='doctor'){
   const checks=await doctor();console.log(values.json?JSON.stringify(checks):checks.map(c=>`${c.available?'✓':'✗'} ${c.tool}: ${c.detail}`).join('\n'));if(checks.some(c=>!c.available))process.exitCode=1;
  }else{

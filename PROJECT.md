@@ -2,7 +2,7 @@
 
 ## Accepted scope
 
-Build a low-instruction batch image/video optimizer accessible through a shared CLI, Codex skill, GitHub Action, and drag-and-drop GUI. The user approved local web GUI first, TypeScript/npm, the existing folder, local-only development, WebP/PNG/MP4 defaults, optional AVIF, preserved originals, and camera RAW later. Video belongs in v0.1. On November 13 the user expanded scope to RAW now, a neutral shadcn defaults/customize interface, additional output formats/compression settings, and researched channel guidance with tooltips and Reddit evidence. Native Mac packaging and hosted web delivery follow the local version.
+Build a low-instruction batch image/video optimizer accessible through a shared CLI, Codex skill, GitHub Action, and drag-and-drop GUI. The user approved local web GUI first, TypeScript/npm, the existing folder, local-only development, WebP/PNG/MP4 defaults, optional AVIF, preserved originals, and camera RAW later. Video belongs in v0.1. On November 13 the user expanded scope to RAW now, a neutral shadcn defaults/customize interface, additional output formats/compression settings, and researched channel guidance with tooltips and Reddit evidence. On November 16 the user authorized a public repo, GitHub Pages production, and packaging as a Mac app or agent skill.
 
 ## Architecture
 
@@ -44,8 +44,17 @@ Brand: outlined Gooper Condensed 5 Bold from `/Users/alexbloom/Documents/Fonts/G
 
 1. Collect representative samples across current camera modes, especially compressed RAW/DNG, pixel shift and wide-gamut/HDR inputs. Validate Linux codecs and GitHub workflows in a published repo. Run controlled upload experiments rather than deriving stronger claims from Reddit.
 2. Incremental export caching, cancellation/queues, larger comparison navigation, target-byte budgets and perceptual scoring on a representative corpus.
-3. Signed Mac app with bundled/versioned codecs, Finder drops, OS permissions, updater and license notices. Reuse the engine and interface; select wrapper after packaging review.
-4. Hosted web delivery: evaluate browser-local WASM for supported formats and memory limits; opt-in isolated upload processing for full HEIC/large-video parity. Provider/domain remain undecided; local-only authorization does not authorize deployment.
+3. Developer ID signing/notarization, bundled/versioned codecs, Finder-open events, updater and Intel verification for the new AppKit/WKWebView Mac shell.
+4. Hosted web delivery: evaluate browser-local WASM for supported formats and memory limits; opt-in isolated upload processing for full HEIC/large-video parity. The current authorized Pages deployment provides downloads/setup only, with no uploaded-media service. A custom domain is undecided.
 5. HDR tone mapping, alpha video, animation, multi-shot RAW selection/merging, posters, responsive video, CSS breakpoint import and art direction.
 
-Technical and platform sources are maintained in `docs/OUTPUT-RESEARCH.md` and `src/guidance.ts`. No cloud service, repo publication or domain setup is included in this local implementation.
+Technical and platform sources are maintained in `docs/OUTPUT-RESEARCH.md` and `src/guidance.ts`. The public repository is https://github.com/AlexBloom/hot-compress. No media-processing cloud service or custom domain is configured.
+
+
+## Distribution (November 16)
+
+`macos/HotCompress.swift` embeds the existing workbench in WKWebView and starts the bundled Node/engine on an automatic loopback port. Native pickers and save panels support imports/downloads. Each app process owns its engine; originals are retained. macOS 14+; first preview is Apple Silicon, ad-hoc signed and unnotarized. System codecs remain a separate Homebrew installation. No Developer ID identity is available on this Mac.
+
+`scripts/package-skill.mjs` packages SKILL.md, launcher, built engine and portable install script, with no checkout/build step for the recipient. The installer refuses replacement. `scripts/package-mac.mjs` packages Node with its exact upstream license. Neither package redistributes codec binaries.
+
+`site/` builds independently into `site-dist/`; Pages serves its download/setup website. The full compression GUI remains local because the engine needs filesystem access and native codec processes. The main-only manual workflow deploys only after an explicitly requested release promoted through a dev-to-main PR.

@@ -55,8 +55,10 @@ test('AVIF output, EXIF rotation and no upscale',async t=>{
 });
 test('local server requires token, rejects traversal, processes uploaded file, downloads generated results',async t=>{
  const dir=await fixture(t);const source=path.join(dir,'test.png');await command('magick',['-size','20x20','xc:none',source]);
- const {server,link}=await serve(14318,false);t.after(()=>new Promise(resolve=>server.close(resolve)));
+ const {server,link}=await serve(0,false);t.after(()=>new Promise(resolve=>server.close(resolve)));
  const base=link.split('/#')[0],token=link.split('#')[1],headers={'x-hot-token':token};
+ assert.ok(new URL(base).port !== '0');
+ assert.equal((await fetch(base+'/api/doctor',{headers})).status,200);
  assert.equal((await fetch(base+'/api/doctor')).status,403);
  assert.equal((await fetch(base+'/api/doctor',{headers:{...headers,Origin:'https://elsewhere.test'}})).status,403);
  assert.equal((await fetch(base+'/api/upload',{method:'POST',headers:{...headers,'x-file-name':'..%2Fbad.png'},body:'bad'})).status,400);
