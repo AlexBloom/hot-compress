@@ -7,36 +7,45 @@ import { mkdir, mkdtemp, writeFile, readFile, stat, rm } from 'node:fs/promises'
 import { createWriteStream, createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { Transform } from 'node:stream';
-import { compress, command, doctor, validateOptions, type Options, type Report } from './engine.ts';
+import { PreviewLibrary } from './previews.ts';
+import { compress, command, doctor, capabilities, validateOptions, discover, type Options, type Report } from './engine.ts';
 
 export async function serve(port = 4318, open = true) {
-  if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Port must be 1024–65535.');
+  if (!Number.isInteger(port) || (port!==0 && (port < 1024 || port > 65535))) throw new Error('Port must be 0 (automatic) or 1024–65535.');
   const token = randomUUID();
   const workspace = await mkdtemp(path.join(os.tmpdir(),'hot-compress-gui-'));
-  const web = fileURLToPath(new URL('../web/',import.meta.url));
+  const web = fileURLToPath(new URL('../web-dist/',import.meta.url));
   const uploads = new Map<string,string>();
   const jobs = new Map<string,{state:string;current:number;total:number;asset?:string;report?:Report;error?:string}>();
+  const library=new PreviewLibrary(path.join(workspace,'previews'));
   let busy = false;
-  const origin = `http://127.0.0.1:${port}`;
+  function optionsFrom(value: any = {}): Options {
+    const keys=['destination','format','videoFormat','preset','quality','lossless','pngLevel','tiffCompression','jpegChroma','videoCrf','frameRate','resize','rawWhiteBalance','responsive','widths','sizes','maxWidth','output'];
+    return validateOptions(Object.fromEntries(keys.filter(key=>value[key]!==undefined).map(key=>[key,value[key]])));
+  }
+  async function inline(res:http.ServerResponse,file:string,mime:string){const info=await stat(file);res.writeHead(200,{'Content-Type':mime,'Content-Length':info.size,'Cache-Control':'private, max-age=3600'});await pipeline(createReadStream(file),res);}
+  let origin = `http://127.0.0.1:${port}`;
   function json(res: http.ServerResponse, code: number, data: unknown) { res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data)); }
   async function body(req: http.IncomingMessage) { let value=''; for await (const chunk of req) {value+=chunk;if(value.length>64000) throw new Error('Request too large');} return JSON.parse(value); }
   const server = http.createServer(async (req,res)=> {
     try {
-      if (req.headers.host !== `127.0.0.1:${port}`) return json(res,403,{error:'Invalid host'});
+      if (req.headers.host !== new URL(origin).host) return json(res,403,{error:'Invalid host'});
       if (req.headers.origin && req.headers.origin !== origin) return json(res,403,{error:'Invalid origin'});
       const url = new URL(req.url!,origin);
       res.setHeader('X-Content-Type-Options','nosniff');
       res.setHeader('Referrer-Policy','no-referrer');
-      res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'");
+      res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'");
       if (!url.pathname.startsWith('/api/')) {
         if (req.method !== 'GET') return json(res,405,{error:'Method not allowed'});
-        const filename = {'/':'index.html','/app.js':'app.js','/style.css':'style.css'}[url.pathname];
-        if (!filename) return json(res,404,{error:'Not found'});
-        const mime = filename.endsWith('.css') ? 'text/css' : filename.endsWith('.js') ? 'text/javascript' : 'text/html';
-        res.writeHead(200,{'Content-Type':mime,'Cache-Control':'no-store'}); return res.end(await readFile(path.join(web,filename)));
+        const filename=url.pathname==='/'?'index.html':/^\/assets\/[a-zA-Z0-9_.-]+\.(js|css|woff2|svg)$/.test(url.pathname)?url.pathname.slice(1):null;
+        if(!filename)return json(res,404,{error:'Not found'});
+        const mime=filename.endsWith('.css')?'text/css':filename.endsWith('.js')?'text/javascript':filename.endsWith('.woff2')?'font/woff2':filename.endsWith('.svg')?'image/svg+xml':'text/html';
+        let content: Buffer;try{content=await readFile(path.join(web,filename));}catch{return json(res,404,{error:'Build the interface with npm run build.'});}
+        res.writeHead(200,{'Content-Type':mime,'Cache-Control':'no-store'});return res.end(content);
       }
       const supplied = req.headers['x-hot-token'] || url.searchParams.get('token') || '';
       if (typeof supplied !== 'string' || supplied.length !== token.length || !timingSafeEqual(Buffer.from(supplied),Buffer.from(token))) return json(res,403,{error:'Open the GUI using the terminal link to authorize this session.'});
+      if(url.pathname === '/api/capabilities' && req.method==='GET')return json(res,200,await capabilities());
       if (url.pathname === '/api/doctor' && req.method === 'GET') return json(res,200,await doctor());
       if (url.pathname === '/api/upload' && req.method === 'POST') {
         if (busy) return json(res,409,{error:'Wait for the current batch before uploading another.'});
@@ -51,20 +60,44 @@ export async function serve(port = 4318, open = true) {
         catch(err){await rm(directory,{recursive:true,force:true});throw err;}
         return json(res,200,{id});
       }
+      if(url.pathname==='/api/library' && req.method==='POST') {
+        if(busy)return json(res,409,{error:'Wait for the current batch.'});
+        const data=await body(req);const ids:string[]=data.ids||[];
+        if(!Array.isArray(ids)||ids.length>10000||ids.some(id=>!uploads.has(id)))throw new Error('Unknown upload.');
+        const inputs=data.directory?[String(data.directory)]:ids.map(id=>uploads.get(id)!);
+        const files=await discover(inputs,path.resolve(optionsFrom(data.options).output||'optimized'));
+        const entries=await library.register(files.slice(0,2000),data.directory?path.resolve(String(data.directory)):undefined);
+        // Keep selected uploads for interactive comparisons and repeat exports; release replaced uploads.
+        for(const [id] of uploads)if(!ids.includes(id)){uploads.delete(id);await rm(path.join(workspace,'uploads',id),{recursive:true,force:true});}
+        return json(res,200,{entries,total:files.length});
+      }
+      const thumb=url.pathname.match(/^\/api\/media\/([a-f0-9-]+)\/thumbnail$/);
+      if(thumb && req.method==='GET') {
+        const wb=validateOptions({rawWhiteBalance:(url.searchParams.get('wb')||'camera') as Options['rawWhiteBalance']}).rawWhiteBalance;
+        return await inline(res,await library.thumbnail(thumb[1],wb),'image/webp');
+      }
+      const sample=url.pathname.match(/^\/api\/media\/([a-f0-9-]+)\/preview$/);
+      if(sample && req.method==='POST') {
+        const data=await body(req);return json(res,200,await library.preview(sample[1],optionsFrom(data.options),data.region));
+      }
+      const previewAsset=url.pathname.match(/^\/api\/preview-assets\/([a-f0-9-]+)$/);
+      if(previewAsset && req.method==='GET') {
+        const file=library.file(previewAsset[1]);if(!file)return json(res,404,{error:'Preview expired. Select the thumbnail again.'});
+        return await inline(res,file,'image/png');
+      }
       if (url.pathname === '/api/jobs' && req.method === 'POST') {
         if (busy) return json(res,409,{error:'A batch is already running.'});
         const data = await body(req);
-        const options: Options = validateOptions({format:data.options?.format,preset:data.options?.preset,responsive:data.options?.responsive,widths:data.options?.widths,sizes:data.options?.sizes,maxWidth:data.options?.maxWidth});
-        if (typeof options.responsive !== 'undefined' && typeof options.responsive !== 'boolean') throw new Error('Invalid responsive option');
+        const options=optionsFrom(data.options);
         const ids: string[] = data.ids || [];
         if (!Array.isArray(ids) || ids.length>10000 || ids.some(id=>!uploads.has(id))) throw new Error('Unknown upload');
         const inputs = data.directory ? [String(data.directory)] : ids.map(id=>uploads.get(id)!);
         if (!inputs.length) throw new Error('Choose files or a directory.');
         // GUI outputs live in a persistent folder, never in the temporary upload tree.
-        options.output=path.resolve('optimized');
+        options.output=path.resolve(options.output || 'optimized');
         const id=randomUUID();const job={state:'running',current:0,total:0} as {state:string;current:number;total:number;asset?:string;report?:Report;error?:string};
         jobs.set(id,job);busy=true;
-        void compress(inputs,options,(asset,current,total)=>Object.assign(job,{current,total,asset:path.basename(asset.source)})).then(report=>{job.report=report;job.state='done';}).catch(err=>{job.state='error';job.error=err.message;}).finally(async()=>{busy=false;for(const upload of ids){const file=uploads.get(upload);uploads.delete(upload);if(file)await rm(path.join(workspace,'uploads',upload),{recursive:true,force:true});}});
+        void compress(inputs,options,(asset,current,total)=>Object.assign(job,{current,total,asset:path.basename(asset.source)})).then(report=>{job.report=report;job.state='done';}).catch(err=>{job.state='error';job.error=err.message;}).finally(()=>{busy=false;});
         return json(res,202,{id});
       }
       const match=url.pathname.match(/^\/api\/jobs\/([a-f0-9-]+)(?:\/(download|zip))?$/);
@@ -97,6 +130,8 @@ export async function serve(port = 4318, open = true) {
   });
   server.requestTimeout=30*60*1000;
   await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
+  const address=server.address();
+  if(address && typeof address!=='string')origin=`http://127.0.0.1:${address.port}`;
   const link=`${origin}/#${token}`;
   console.log(`Hot Compress is running locally: ${link}\nFiles stay on this Mac. Outputs: ${path.resolve('optimized')}\nPress Ctrl+C to stop.`);
   if(open) { const bin=process.platform==='darwin'?'open':process.platform==='win32'?'explorer':'xdg-open';void command(bin,[link],10000).catch(()=>{}); }

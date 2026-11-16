@@ -6,3 +6,6 @@ optimized/
 *.log
 .env*
 !.env.example
+web-dist/
+release/
+site-dist/

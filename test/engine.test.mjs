@@ -44,7 +44,7 @@ test('rejects destructive animation flattening, bad options, invalid files; batc
  const report=await compress([gif,bad,good],{output:path.join(dir,'out')});
  assert.equal(report.assets.filter(a=>a.status==='error').length,2);assert.equal(report.assets.filter(a=>a.status==='done').length,1);
  assert.ok(report.assets.filter(a=>a.status==='error').every(a=>!a.outputs.length));
- assert.throws(()=>validateOptions({format:'jpeg'}));assert.throws(()=>validateOptions({widths:[NaN]}));
+ assert.throws(()=>validateOptions({format:'invalid'}));assert.throws(()=>validateOptions({widths:[NaN]}));
 });
 test('AVIF output, EXIF rotation and no upscale',async t=>{
  const dir=await fixture(t);const source=path.join(dir,'oriented.tiff');
@@ -55,8 +55,10 @@ test('AVIF output, EXIF rotation and no upscale',async t=>{
 });
 test('local server requires token, rejects traversal, processes uploaded file, downloads generated results',async t=>{
  const dir=await fixture(t);const source=path.join(dir,'test.png');await command('magick',['-size','20x20','xc:none',source]);
- const {server,link}=await serve(14318,false);t.after(()=>new Promise(resolve=>server.close(resolve)));
+ const {server,link}=await serve(0,false);t.after(()=>new Promise(resolve=>server.close(resolve)));
  const base=link.split('/#')[0],token=link.split('#')[1],headers={'x-hot-token':token};
+ assert.ok(new URL(base).port !== '0');
+ assert.equal((await fetch(base+'/api/doctor',{headers})).status,200);
  assert.equal((await fetch(base+'/api/doctor')).status,403);
  assert.equal((await fetch(base+'/api/doctor',{headers:{...headers,Origin:'https://elsewhere.test'}})).status,403);
  assert.equal((await fetch(base+'/api/upload',{method:'POST',headers:{...headers,'x-file-name':'..%2Fbad.png'},body:'bad'})).status,400);
@@ -85,4 +87,55 @@ test('same basenames in different folders never collide; alpha values survive PN
  const report=await compress([path.join(dir,'a'),path.join(dir,'b')],{output:path.join(dir,'out')});
  assert.equal(new Set(report.assets.flatMap(a=>a.outputs.map(o=>o.file))).size,2);
  for(const asset of report.assets){assert.equal(asset.status,'done');const pixel=await command('magick',[path.join(report.directory,asset.outputs[0].file),'-format','%[fx:p{0,0}.a]','info:']);assert.ok(Math.abs(Number(pixel)-0.35)<0.005);}
+});
+test('RAW DNG develops sensor data and preserve renders to TIFF without touching the RAW',async t=>{
+ const {syntheticDng}=await import('./raw-fixture.mjs');const dir=await fixture(t);const source=path.join(dir,'sensor.dng');const original=syntheticDng();await writeFile(source,original);
+ const scan=await discover([dir],path.join(dir,'out'));assert.deepEqual(scan,[source]);
+ const report=await compress([source],{format:'preserve',output:path.join(dir,'out'),rawWhiteBalance:'camera'});
+ assert.equal(report.assets[0].status,'done',report.assets[0].reason);assert.ok(report.assets[0].outputs[0].file.endsWith('.tiff'));
+ assert.ok(report.assets[0].warnings.some(w=>w.includes('sensor data')));assert.ok(report.assets[0].warnings.some(w=>w.includes('RAW to TIFF')));assert.deepEqual(await readFile(source),original);
+ const web=await compress([source],{output:path.join(dir,'out'),rawWhiteBalance:'auto'});assert.equal(web.assets[0].status,'done',web.assets[0].reason);assert.ok(web.assets[0].outputs[0].file.endsWith('.webp'));
+});
+test('custom JPEG, source preservation, TIFF compressions and PNG effort are real output controls',async t=>{
+ const dir=await fixture(t);const source=path.join(dir,'photo.jpg');await command('magick',['-size','96x64','gradient:red-blue',source]);
+ const preserved=await compress([source],{format:'preserve',quality:91,jpegChroma:'444',output:path.join(dir,'out')});assert.equal(preserved.assets[0].status,'done');assert.ok(preserved.assets[0].outputs[0].file.endsWith('.jpg'));
+ for(const tiffCompression of ['zip','lzw','jpeg','none']){
+  const report=await compress([source],{format:'tiff',tiffCompression,output:path.join(dir,'out')});assert.equal(report.assets[0].status,'done',report.assets[0].reason);
+  const compression=await command('magick',['identify','-format','%C',path.join(report.directory,report.assets[0].outputs[0].file)]);assert.equal(compression.toLowerCase(),tiffCompression);
+ }
+ const alpha=path.join(dir,'alpha.png');await command('magick',['-size','80x60','xc:rgba(40,80,120,0.5)',alpha]);
+ for(const pngLevel of [0,9]){const report=await compress([alpha],{format:'jpeg',pngLevel,output:path.join(dir,'out')});assert.equal(report.assets[0].status,'done');assert.ok(report.assets[0].outputs[0].file.endsWith('.png'));assert.ok(report.assets[0].warnings.some(w=>w.includes('preserve transparency')));}
+});
+test('WebP and JPEG XL lossless modes, JXL decoding and JXL animation rejection',async t=>{
+ const {capabilities}=await import('../dist/engine.js');const dir=await fixture(t);const source=path.join(dir,'photo.png');await command('magick',['-size','96x64','gradient:red-blue','-depth','8',source]);
+ for(const format of ['webp','jxl']){
+  if(format==='jxl'&&!(await capabilities()).image.jxl)continue;
+  const report=await compress([source],{format,lossless:true,output:path.join(dir,'out')});assert.equal(report.assets[0].status,'done',report.assets[0].reason);
+  let decoded=path.join(report.directory,report.assets[0].outputs[0].file);
+  if(format==='jxl'){const target=path.join(dir,'decoded.png');await command('djxl',[decoded,target]);decoded=target;const again=await compress([path.join(report.directory,report.assets[0].outputs[0].file)],{output:path.join(dir,'out')});assert.equal(again.assets[0].status,'done',again.assets[0].reason);}
+  const originalPixels=await command('magick',[source,'-format','%#','info:']);const outputPixels=await command('magick',[decoded,'-format','%#','info:']);assert.equal(outputPixels,originalPixels);
+ }
+ if((await capabilities()).image.jxl){const gif=path.join(dir,'animation.gif'),jxl=path.join(dir,'animation.jxl');await command('magick',['-size','32x32','xc:red','-size','32x32','xc:blue','-loop','0',gif]);await command('cjxl',[gif,jxl]);const report=await compress([jxl],{output:path.join(dir,'out')});assert.equal(report.assets[0].status,'error');assert.match(report.assets[0].reason,/Animated JPEG XL/);}
+});
+test('destination presets retain upload motion and use platform-friendly image outputs',async t=>{
+ const dir=await fixture(t);const video=path.join(dir,'source.mov');await command('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=size=128x96:rate=60','-t','0.2','-c:v','libx264',video]);
+ const report=await compress([video],{destination:'youtube',output:path.join(dir,'out')});assert.equal(report.assets[0].status,'done',report.assets[0].reason);
+ const probe=JSON.parse(await command('ffprobe',['-v','error','-show_streams','-of','json',path.join(report.directory,report.assets[0].outputs[0].file)]));assert.equal(evalFraction(probe.streams[0].avg_frame_rate),60);
+ const photo=path.join(dir,'photo.jpg');await command('magick',['-size','1600x2000','gradient:red-blue',photo]);
+ const instagram=await compress([photo],{destination:'instagram',output:path.join(dir,'out')});assert.equal(instagram.assets[0].status,'done');assert.equal(instagram.assets[0].outputs[0].width,1080);assert.equal(instagram.assets[0].outputs[0].height,1350);assert.ok(instagram.assets[0].outputs[0].file.endsWith('.jpg'));
+ const app=await compress([photo],{destination:'app',output:path.join(dir,'out')});assert.equal(app.assets[0].outputs[0].width,1600);assert.equal(app.assets[0].outputs[0].height,2000);
+});
+test('video HEVC, VP9, AV1 and preserve codec/container outputs decode correctly',async t=>{
+ const {capabilities}=await import('../dist/engine.js');const caps=await capabilities();const dir=await fixture(t);const source=path.join(dir,'clip.mov');await command('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=size=128x96:rate=30','-t','0.2','-c:v','libx264',source]);
+ for(const [videoFormat,expected] of [['hevc','hevc'],['vp9','vp9'],['av1','av1'],['preserve','h264']]){
+  if(videoFormat!=='preserve'&&!caps.video[videoFormat])continue;
+  const report=await compress([source],{videoFormat,output:path.join(dir,'out')});assert.equal(report.assets[0].status,'done',report.assets[0].reason);
+  const output=path.join(report.directory,report.assets[0].outputs[0].file);const probe=JSON.parse(await command('ffprobe',['-v','error','-show_streams','-of','json',output]));assert.equal(probe.streams[0].codec_name,expected);
+  await command('ffmpeg',['-v','error','-i',output,'-f','null','-']);if(videoFormat==='preserve')assert.ok(output.endsWith('.mov'));
+ }
+});
+test('custom output may share the input directory; generated batches are not reprocessed',async t=>{
+ const dir=await fixture(t);const source=path.join(dir,'image.jpg');await command('magick',['-size','32x32','xc:red',source]);
+ const first=await compress([dir],{output:dir});assert.equal(first.assets.length,1);assert.equal(first.assets[0].status,'done');
+ const second=await compress([dir],{output:dir});assert.equal(second.assets.length,1);assert.equal(second.assets[0].source,source);assert.notEqual(second.directory,first.directory);
 });

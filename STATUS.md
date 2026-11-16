@@ -1,28 +1,49 @@
 # Status
 
-Updated 2026-11-12, America/New_York. Built directly on Alex's Mac in `/Users/alexbloom/Documents/GitHub/hot-compress`. Local branch: `dev`. No GitHub remote, push, release, hosting, or domain configured.
+Updated November 16, 2026, America/New_York. Built directly on Alex's Mac at `/Users/alexbloom/Documents/GitHub/hot-compress`. Branch `dev`. Public repository created at https://github.com/AlexBloom/hot-compress. First release and Pages deployment in progress.
 
-## Complete and verified
+## Current workbench
 
-- Shared TypeScript engine, CLI, local browser GUI with file/folder drops and pickers, directory input, polling, individual downloads, ZIP batches, savings and exception reports.
-- ImageMagick/FFmpeg/ffprobe/zip found on this Mac. Real JPEG/TIFF/HEIC, alpha PNG, AVIF, EXIF rotation, no-upscale/responsive image sizes, H.264 video/audio/frame rate verified.
-- Seven integration tests passed via `npm test`, including animation/APNG, alpha video and HDR rejection, partial-alpha preservation, output collisions, preservation of originals, repeat-run safety and server upload/auth/download/ZIP checks.
-- `npm run check` and browser-JS syntax check passed. Skill validator passed. Action/workflow YAML parsed. Installed CLI and Action adapter smoke checks passed.
-- CLI installed using `npm link --ignore-scripts`; `hot-compress --help` works.
-- Skill installed at `~/.codex/skills/hot-compress`; start a new Codex chat for discovery. Installed launcher points to this checkout.
-- Reusable composite Action and opt-in branch-push/manual workflow example prepared. Live GitHub execution and Linux codecs have not been verified.
+- Inspected sibling `spiro-craft` and `tesselate` layout source. Applied their compact header, central canvas and independent side-panel principles: input / media / settings on desktop, canvas-first stacking on narrow screens.
+- The middle canvas shows lazy WebP thumbnails bounded to 280 × 200 px. Hover, focus or click selects an item. Matching before/after crops use the current shared encoder settings; center/corner crop positions are available. The source is resized to the export dimensions before comparing, and displayed crops scale down to fit small panes.
+- RAW renders use the LibRaw sensor pipeline. Video comparison uses the first frame of a one-second encoded sample, with bytes explicitly labeled as a sample. Unsupported media is not silently flattened or routed into an unrelated image decoder.
+- Preview rendering has a two-task concurrency limit, debouncing/stale-response protection, cached prepared sources/thumbnails and a bounded 16-sample encoded cache. Original full-resolution files are not served as browser thumbnails.
+- Files upload once per selection, then remain available for previews and repeat exports. Replaced/cleared uploads are removed; previews remain in temporary session storage. Interrupted processes can leave temporary files for OS cleanup.
+- Wordmark: Gooper Condensed 5 Bold from `/Users/alexbloom/Documents/Fonts/Gooper/desktop/GooperCondensed5-Bold.otf`. Outlined SVG only; no font binary included. The arrow mark is retained.
+- Destination summaries and notes now use concise format/dimension/frame-rate descriptions. Both auto-format labels say Recommended. The factual source-review date remains November 13; this was a copy edit, not a new policy review.
+- Neutral shadcn controls, Use defaults / Customize, all export formats, skill, CLI and Action behavior remain available.
+
+## Verified
+
+- Build and backend/frontend TypeScript checks pass; Git diff whitespace check passes.
+- All 16 integration tests pass. Existing conversion, alpha, RAW, codec, orientation, responsive, repeat-safety and server checks pass after the source-preparation refactor.
+- New tests verify bounded thumbnails, real encoder-quality changes in decoded crop pixels, identical before crops across quality changes, crop-position changes, original preservation, RAW/alpha/video samples, unsupported-file handling, authorized preview assets, directory listing and repeat exports from selected uploads.
+- Browser checked at 1440 × 900: three columns (240 / 880 / 320 px), loaded thumbnails including RAW and transparency, Gooper wordmark, encoder selection, quality changes, crop navigation and a completed four-file export. Preview image URLs changed with quality and no browser errors were captured.
+- Narrow 480 px viewport has no page horizontal overflow and places the canvas before input/settings. Temporary viewport override reset afterward.
+- Final preview shows four generated test assets from `/private/tmp/hot-canvas-demo`, not user photographs. Select Clear selection or choose another folder to replace them.
+- Screenshot: `.hot-compress/preview-canvas.jpg` (ignored local artifact).
+- System codecs and installed CLI/skill remain available. Live GitHub execution and Linux codecs are not verified.
 
 ## Preview
 
-- Command: `npm start` from this project.
-- Base URL: `http://127.0.0.1:4318/`. Use the authorized link printed by the running server; it contains the session token in its fragment. Tokens are not committed.
-- Verified HTTP 200 and listening process PID 65786. Started in persistent command session 3313. The terminal session contains its output; no persistent logfile is configured. A detached nohup attempt did not survive and is not the active server.
-- Restart: stop the existing process, then run `hot-compress gui` or `npm start`. The server opens the browser and prints a fresh authorized link.
-- Browser automation could not inspect the interface because local browser use is disabled in Work settings. The HTTP/API flow is tested; visual layout and interactive drag-and-drop QA remain unverified.
+- Running command: `npm start`.
+- Base URL: `http://127.0.0.1:4318/`; use the authorized link printed by the server. Session tokens are not committed.
+- Current process PID 7496, persistent command session 87159. Console output is captured in the command session; no disk logfile configured.
+- Restart: stop the current process, then `hot-compress gui` or `npm start`. Build frontend changes with `npm run build` and reload; restart for backend changes.
 - Production: not deployed.
 
-## Scope boundaries / next work
+## Boundaries / next work
 
-The approved v0.1 is local-first. Native Mac packaging and hosted web delivery are planned in PROJECT.md. Camera RAW, animation optimization, alpha video, HDR tone mapping, responsive video, perceptual scoring and incremental caching are not implemented. Current preset recommendations do not guarantee optimal perceptual quality or smaller files. The report exposes actual savings/growth.
+The first preview can be slower for large RAW images or slow encoders because full output is encoded before cropping. The canvas lists at most 2000 files; folder export still processes all supported files. Preview frame bytes are not a full-video file-size estimate. Prepared-source/thumbnail disk caches last for the session; large selections can consume disk space.
 
-Next: visually review the running GUI and try representative camera originals. Before publishing the Action, verify Linux codec coverage and execute CI in GitHub. No need to create a remote or deploy until requested.
+Camera-mode support depends on LibRaw. Multi-shot RAW, animation optimization, HDR processing and video alpha remain unimplemented and reported. Preserve format re-encodes prepared copies. No arbitrary byte budget, perceptual quality score, platform-upload A/B experiment, universal account validator or live policy refresh is claimed.
+
+Mac developer preview and portable skill packages are implemented; Pages download/setup deployment is in progress. Validate Linux/live GitHub before publishing the Action. Additional camera samples and controlled platform tests would improve future guidance.
+
+
+## Distribution verification (November 16)
+
+- Native AppKit/WKWebView bundle includes Node, compiled engine and the existing workbench. Apple Silicon/macOS 14+ package; ad-hoc signature verified, no Developer ID or notarization. Codec tools remain system dependencies.
+- Portable skill ZIP includes the compiled engine. Isolated installation, doctor and a four-file batch (including RAW/alpha) passed without a checkout or npm build; existing-skill overwrite is refused.
+- Mac native window startup, native file picker, transparent PNG comparison/export and ZIP save were verified. Download navigation cancellation is handled without closing the app.
+- Static Pages source contains download links, honest signing/codec requirements, local-processing boundaries and the workbench screenshot. It serves no compression API.
