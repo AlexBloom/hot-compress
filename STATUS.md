@@ -1,6 +1,6 @@
 # Status
 
-Updated November 16, 2026, America/New_York. Built directly on Alex's Mac at `/Users/alexbloom/Documents/GitHub/hot-compress`. Branch `dev`. Public repository created at https://github.com/AlexBloom/hot-compress. First release and Pages deployment in progress.
+Updated November 16, 2026, America/New_York. Built directly on Alex's Mac at `/Users/alexbloom/Documents/GitHub/hot-compress`. Branch `dev`. Public repository created at https://github.com/AlexBloom/hot-compress. Release v0.2.0-preview.1 published; HTTPS Pages download/setup site is live at https://alexbloom.design/hot-compress/.
 
 ## Current workbench
 
@@ -22,7 +22,7 @@ Updated November 16, 2026, America/New_York. Built directly on Alex's Mac at `/U
 - Narrow 480 px viewport has no page horizontal overflow and places the canvas before input/settings. Temporary viewport override reset afterward.
 - Final preview shows four generated test assets from `/private/tmp/hot-canvas-demo`, not user photographs. Select Clear selection or choose another folder to replace them.
 - Screenshot: `.hot-compress/preview-canvas.jpg` (ignored local artifact).
-- System codecs and installed CLI/skill remain available. Live GitHub execution and Linux codecs are not verified.
+- System codecs and installed CLI/skill remain available. GitHub macOS CI is verified; Linux codecs remain unverified.
 
 ## Preview
 
@@ -30,7 +30,7 @@ Updated November 16, 2026, America/New_York. Built directly on Alex's Mac at `/U
 - Base URL: `http://127.0.0.1:4318/`; use the authorized link printed by the server. Session tokens are not committed.
 - Current process PID 7496, persistent command session 87159. Console output is captured in the command session; no disk logfile configured.
 - Restart: stop the current process, then `hot-compress gui` or `npm start`. Build frontend changes with `npm run build` and reload; restart for backend changes.
-- Production: not deployed.
+- Production: https://alexbloom.design/hot-compress/ (download/setup website; media processing stays local).
 
 ## Boundaries / next work
 
@@ -38,7 +38,7 @@ The first preview can be slower for large RAW images or slow encoders because fu
 
 Camera-mode support depends on LibRaw. Multi-shot RAW, animation optimization, HDR processing and video alpha remain unimplemented and reported. Preserve format re-encodes prepared copies. No arbitrary byte budget, perceptual quality score, platform-upload A/B experiment, universal account validator or live policy refresh is claimed.
 
-Mac developer preview and portable skill packages are implemented; Pages download/setup deployment is in progress. Validate Linux/live GitHub before publishing the Action. Additional camera samples and controlled platform tests would improve future guidance.
+Mac developer preview and portable skill packages are implemented; Pages download/setup deployment is live. Validate Linux/live GitHub before publishing the Action. Additional camera samples and controlled platform tests would improve future guidance.
 
 
 ## Distribution verification (November 16)
@@ -46,4 +46,15 @@ Mac developer preview and portable skill packages are implemented; Pages downloa
 - Native AppKit/WKWebView bundle includes Node, compiled engine and the existing workbench. Apple Silicon/macOS 14+ package; ad-hoc signature verified, no Developer ID or notarization. Codec tools remain system dependencies.
 - Portable skill ZIP includes the compiled engine. Isolated installation, doctor and a four-file batch (including RAW/alpha) passed without a checkout or npm build; existing-skill overwrite is refused.
 - Mac native window startup, native file picker, transparent PNG comparison/export and ZIP save were verified. Download navigation cancellation is handled without closing the app.
-- Static Pages source contains download links, honest signing/codec requirements, local-processing boundaries and the workbench screenshot. It serves no compression API.
+- Static Pages source contains download links, honest signing/codec requirements, local-processing boundaries and the workbench screenshot. It serves no compression API. HTTPS is enforced; this project inherits the account’s existing alexbloom.design Pages domain. No DNS changes were made.
+
+
+## Published release
+
+- Public repo: https://github.com/AlexBloom/hot-compress (default `dev`). `main` requires PR promotion; force pushes/deletion disabled. Development checkout remains on `dev`.
+- Promotion: https://github.com/AlexBloom/hot-compress/pull/1 (merged).
+- Release: https://github.com/AlexBloom/hot-compress/releases/tag/v0.2.0-preview.1 — Apple Silicon Mac ZIP, portable skill ZIP, SHA256SUMS.txt. Both public downloads match the locally tested packages byte for byte.
+- CI: https://github.com/AlexBloom/hot-compress/actions/runs/43952963885 — check, 16 integration tests, website build and both distribution builds passed on GitHub macOS. PR CI also passed.
+- Pages: https://github.com/AlexBloom/hot-compress/actions/runs/43953578097 — successful manual main-only deployment. Live HTML and browser render verified at https://alexbloom.design/hot-compress/.
+- Mac preview screenshots and native ZIP smoke test are ignored under `.hot-compress/`. Native picker/export testing generated synthetic PNG outputs under the app’s default Pictures workspace; originals were not modified.
+- Next distribution work: Developer ID/notarization, bundled/versioned codecs, Intel verification and installer/updater. Current downloads remain honestly labeled developer previews.
