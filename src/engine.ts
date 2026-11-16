@@ -91,11 +91,8 @@ async function assertStatic(input: string) {
   const frames = (await command('magick', ['identify','-ping','-format','%w %h %n %[channels]\n',input])).split('\n');
   if (frames.length > 1 || Number(frames[0].split(' ')[2]) > 1) throw new Error('Animated or multipage images are preserved in the source; optimization is not supported yet.');
 }
-async function image(input: string, dest: string, options: Options, asset: Asset, directory: string) {
-  const profile=profileFor(options.destination);
+export async function prepareStill(input: string, temp: string, options: Options = {}, warnings: string[] = []): Promise<string> {
   const raw=rawFormats.has(path.extname(input).toLowerCase());
-  const temp = await mkdtemp(path.join(os.tmpdir(),'hot-image-'));
-  try {
     let rendered=input;
     if(path.extname(input).toLowerCase()==='.jxl'){
       const details=await command('jxlinfo',[input]);
@@ -113,11 +110,19 @@ async function image(input: string, dest: string, options: Options, asset: Asset
       try { await command('dcraw_emu',[options.rawWhiteBalance==='auto'?'-a':'-w','-o','1','-q','3','-6','-T','-Z',rendered,copy],300000); }
       catch(err) {throw new Error(`RAW development failed. Install LibRaw (brew install libraw; Debian: libraw-bin). Camera/RAW compression must be supported by that build. ${(err as Error).message}`);}
       await stat(rendered);
-      asset.warnings!.push('RAW developed from sensor data using LibRaw, camera/auto white balance and an sRGB rendering. This is not the camera JPEG look or archival RAW recompression.');
+      warnings.push('RAW developed from sensor data using LibRaw, camera/auto white balance and an sRGB rendering. This is not the camera JPEG look or archival RAW recompression.');
     }
     await assertStatic(rendered);
     const normalized = path.join(temp,'normalized.png');
     await command('magick', [rendered,'-auto-orient','-colorspace','sRGB','-strip',normalized]);
+    return normalized;
+}
+async function image(input: string, dest: string, options: Options, asset: Asset, directory: string, prepared?: string) {
+  const profile=profileFor(options.destination);
+  const raw=rawFormats.has(path.extname(input).toLowerCase());
+  const temp = await mkdtemp(path.join(os.tmpdir(),'hot-image-'));
+  try {
+    const normalized = prepared || await prepareStill(input,temp,options,asset.warnings!);
     const metadata=(await command('magick',['identify','-ping','-format','%w %h %[channels]',normalized])).split(' ');
     const dims=metadata.slice(0,2).map(Number);
     const transparent=/^(?:s?rgba|graya|cmyka|.*alpha)/i.test(metadata.slice(2).join(''));
@@ -171,7 +176,7 @@ async function image(input: string, dest: string, options: Options, asset: Asset
     }
   } finally { await rm(temp,{recursive:true,force:true}); }
 }
-async function video(input: string, dest: string, options: Options, asset: Asset, directory: string) {
+async function video(input: string, dest: string, options: Options, asset: Asset, directory: string, duration?: number) {
   const profile=profileFor(options.destination);
   const probe=JSON.parse(await command('ffprobe',['-v','error','-show_streams','-show_format','-of','json',input]));
   const stream=probe.streams.find((s:any)=>s.codec_type==='video');
@@ -193,6 +198,7 @@ async function video(input: string, dest: string, options: Options, asset: Asset
   else filters.push('scale=trunc(iw/2)*2:trunc(ih/2)*2');
   filters.push('format=yuv420p');
   const args=['-hide_banner','-loglevel','error','-nostdin','-n','-i',input,'-map','0:v:0','-map','0:a:0?','-vf',filters.join(','),'-c:v',encoder,'-crf',String(crf)];
+  if(duration)args.push('-t',String(duration));
   const fps=options.frameRate==='source'?undefined:options.frameRate??profile.fps;
   if(fps)args.push('-fpsmax',String(fps));
   if(codec==='h264'||codec==='hevc')args.push('-preset','medium');
@@ -217,6 +223,14 @@ async function video(input: string, dest: string, options: Options, asset: Asset
   if(options.destination==='instagram'&&asset.outputs[0].bytes>300_000_000)asset.warnings!.push('Exceeds the documented Instagram Reels API 300 MB limit.');
   if(options.destination==='tiktok'&&(info.width<360||info.height<360))asset.warnings!.push('Below TikTok API minimum dimensions (360 px per side). No upscaling was applied.');
   if(options.destination==='x')asset.warnings!.push('Check your account’s video duration and upload size limit before sharing.');
+}
+export async function renderSample(input: string, directory: string, supplied: Options = {}, prepared?: string): Promise<Asset> {
+  const options=validateOptions({...supplied,responsive:false});
+  const asset:Asset={source:input,status:'done',warnings:[],inputBytes:(await stat(input)).size,outputs:[]};
+  if(videos.has(path.extname(input).toLowerCase()))await video(input,'sample',options,asset,directory,1);
+  else if(images.has(path.extname(input).toLowerCase())||rawFormats.has(path.extname(input).toLowerCase()))await image(input,'sample',options,asset,directory,prepared);
+  else throw new Error('No image preview is available for this file type.');
+  return asset;
 }
 export async function compress(inputs: string[], supplied: Options = {}, progress?: (asset: Asset, index: number, total: number)=>void): Promise<Report> {
   const options = validateOptions({...supplied});

@@ -34,10 +34,16 @@ Balanced quality, bounded dimensions, no crop/upscale, metadata removal, auto-or
 
 Restored the original hotcompress wordmark with its arrow mark, broad header/title spacing, and 1.45:1 desktop input/control split. Shadcn controls, neutral styling, Use defaults / Customize and reduced instructional copy remain. The layout stacks below 760 px; custom input controls stay in the input pane.
 
+## Canvas workbench (November 16)
+
+The user requested the layout principles from sibling `spiro-craft` and `tesselate`: a compact header, independent side controls and a central canvas. Implemented three panes with lazy, bounded thumbnails and matching before/after image crops, refreshed from current encoder settings on hover/focus/click. Preview generation shares the export engine; video uses a labeled first frame of a one-second encode. Source-preparation helpers live in `src/engine.ts`, preview caching in `src/previews.ts`, and the canvas in `web/src/MediaCanvas.tsx`.
+
+Brand: outlined Gooper Condensed 5 Bold from `/Users/alexbloom/Documents/Fonts/Gooper/desktop/GooperCondensed5-Bold.otf`; no font binary distributed. Destination summaries/notes are shorter and concrete; auto format labels say Recommended. Source links and the November 13 factual review date are retained.
+
 ## Next milestones
 
 1. Collect representative samples across current camera modes, especially compressed RAW/DNG, pixel shift and wide-gamut/HDR inputs. Validate Linux codecs and GitHub workflows in a published repo. Run controlled upload experiments rather than deriving stronger claims from Reddit.
-2. Incremental hashing/cache, cancellation/queues, before/after previews, target-byte budgets and perceptual scoring on a representative corpus.
+2. Incremental export caching, cancellation/queues, larger comparison navigation, target-byte budgets and perceptual scoring on a representative corpus.
 3. Signed Mac app with bundled/versioned codecs, Finder drops, OS permissions, updater and license notices. Reuse the engine and interface; select wrapper after packaging review.
 4. Hosted web delivery: evaluate browser-local WASM for supported formats and memory limits; opt-in isolated upload processing for full HEIC/large-video parity. Provider/domain remain undecided; local-only authorization does not authorize deployment.
 5. HDR tone mapping, alpha video, animation, multi-shot RAW selection/merging, posters, responsive video, CSS breakpoint import and art direction.

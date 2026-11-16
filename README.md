@@ -10,7 +10,7 @@ npm run build
 npm start
 ```
 
-Use the authorized localhost link printed in the terminal. **Use defaults** shows file/folder selection and one compression button. **Customize** adds directory input, RAW white balance, destination guidance, image/video format and compression settings, dimensions, responsive widths and output directory.
+Use the authorized localhost link printed in the terminal. The compact workbench follows the sibling Spirocraft/Tesselate layout: input on the left, a media canvas in the middle, and settings on the right. **Use defaults** keeps settings hidden. **Customize** adds directory loading, RAW white balance, destinations, encoders, resizing, responsive widths and an output directory. The layout stacks on smaller screens.
 
 Node 24 is recommended (minimum 22.18). Install system tools:
 
@@ -74,6 +74,18 @@ Video: H.264 MP4, HEVC MP4, VP9 WebM, AV1 MP4, or preserve a supported codec/con
 
 Alpha images use PNG even when a different format is explicitly selected; the report explains that adjustment. Lossless refers to pixels **after** RAW rendering, color conversion, resizing and other preparation. WebP is limited to 8-bit pixels. This is not archival preservation or a RAW round-trip tool.
 
+## Thumbnail canvas and comparison previews
+
+Files are uploaded once to the local server when selected; directory input is loaded with **Load**. The canvas shows lazy-loaded WebP thumbnails bounded to 280 × 200 px. Hover, focus or click a thumbnail to select it. Unsupported files have a placeholder and an explanation rather than being rasterized through an unrelated decoder.
+
+A selected image is encoded with the current settings using the same engine as export. The comparison decodes that result and displays matching before/after crops up to 384 × 384 pixels. The source is resized to the export dimensions before comparison. Crop controls choose the center or a corner; images scale down to fit smaller panes. This is an actual encoder preview, not a CSS approximation. For responsive export, the preview represents the largest variant.
+
+RAW previews use LibRaw sensor rendering. Video previews compare the first frame of a one-second encode; the displayed bytes refer to that sample, not the complete video. Animation, HDR and video-alpha restrictions still apply. The first preview can take time for large images/RAW or slow codecs, because the whole image is encoded before cropping. No full-resolution original is served as a browser thumbnail.
+
+Preview requests are debounced, stale browser results are ignored, thumbnail/render work is limited to two tasks, and up to 16 encoded settings samples are cached. Prepared sources and thumbnails are cached for the server session. The canvas lists up to 2000 files; full-folder export still processes all supported files. Preview pixels and library metadata require the same local session authorization as exports.
+
+The wordmark is outlined from Gooper Condensed 5 Bold in the user's local Fonts collection. No font binary is included.
+
 ## Camera RAW
 
 CR2, CR3, CRW, NEF/NRW, ARW/SRF/SR2, DNG, RAF, RW2, ORF, PEF/PTX, SRW, RWL, 3FR/FFF/IIQ, KDC/DCR, MOS, MRW and X3F are recognized and routed through LibRaw. Support depends on camera model and compression variant; an extension is not a guarantee. The decoder uses sensor data, not an embedded preview, with camera or automatic white balance and a 16-bit sRGB intermediate. The rendering does not reproduce camera JPEG processing or an editor recipe. Preserve-format exports render to TIFF; the source RAW remains intact. Multi-shot merging and HDR tone mapping are not implemented.
@@ -110,8 +122,8 @@ npm run build
 npm start
 ```
 
-Thirteen integration tests cover media conversion, PNG alpha, RAW DNG sensor rendering, lossless WebP/JXL, TIFF compression, HEIC/AVIF, alternative video codecs, orientation/dimensions, upload versus delivery frame rates, animation/HDR/alpha-video rejection, collisions, repeat safety and local API uploads/downloads. A public Canon CR2 was also manually decoded from rawpy's test corpus; it is not committed. Browser checks are recorded in STATUS.md.
+Sixteen integration tests cover media conversion, PNG alpha, RAW DNG sensor rendering, lossless WebP/JXL, TIFF compression, HEIC/AVIF, alternative video codecs, orientation/dimensions, upload versus delivery frame rates, animation/HDR/alpha-video rejection, collisions, repeat safety and local API uploads/downloads. A public Canon CR2 was also manually decoded from rawpy's test corpus; it is not committed. Browser checks are recorded in STATUS.md.
 
-The GUI binds to 127.0.0.1, requires a session token, and rejects foreign origins. File uploads stream to temporary storage, with a 4 GB per-file limit; directory input/CLI avoid that upload limit. Outputs persist. Uploaded inputs are deleted after the batch, although interrupted processes may leave temp files for OS cleanup. One GUI batch runs at a time. Per-command image timeout is two minutes, RAW decoding five minutes, video encoding thirty minutes. Video scaling is capped at an 8192 px long edge even if a higher custom maximum is requested.
+The GUI binds to 127.0.0.1, requires a session token, and rejects foreign origins. File uploads stream to temporary storage, with a 4 GB per-file limit; directory input/CLI avoid that upload limit. Outputs persist. Selected uploads are retained for comparisons and repeat exports, then deleted when the selection is replaced or cleared. Preview images remain in temporary session storage. Interrupted processes may leave files for OS cleanup. One GUI batch runs at a time. Per-command image timeout is two minutes, RAW decoding five minutes, video encoding thirty minutes. Video scaling is capped at an 8192 px long edge even if a higher custom maximum is requested.
 
 Animated/multipage images (including APNG and animated JXL), transparent video and HDR video are reported without flattening. There is no arbitrary target-byte budget or exhaustive platform compliance validator. Native Mac packaging and hosted web service remain future work. No deployment is configured.
